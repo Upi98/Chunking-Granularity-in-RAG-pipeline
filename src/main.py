@@ -3,10 +3,11 @@ import glob
 import tiktoken
 from fixed_chunking import chunk_fixed_256, chunk_fixed_512, chunk_fixed_1024
 from sentence_chunking import sentence_aware_chunking
-from hybrid_chunking1 import hybrid_element_semantic_chunking
+from hybrid_chunking import hybrid_element_semantic_chunking
 from embedding_processor import get_embedding
 from neo4j_storage import store_chunks
 from pdf_extractor import extract_text_from_pdf
+
 
 def load_raw_text(file_path):
     """
@@ -48,12 +49,18 @@ def process_file(file_path):
         store_chunks(chunks, method=method, source=source, embedding_func=get_embedding, tokenizer=tokenizer)
 
 def main():
-    """
-    Main pipeline: iterates over all files in the data folder.
-    """
-    data_files = glob.glob(os.path.join("..", "data", "*"))
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    # Build the absolute path to the data folder
+    data_dir = os.path.join(script_dir, '..', 'data')
+    # Debug: print the resolved data directory
+    print("Looking for data files in:", data_dir)
+    # List all files in the data directory
+    data_files = glob.glob(os.path.join(data_dir, "*"))
+    print("Found data files:", data_files)
+    
     for file_path in data_files:
         process_file(file_path)
-
+    
 if __name__ == "__main__":
     main()

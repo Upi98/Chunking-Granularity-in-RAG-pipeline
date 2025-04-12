@@ -4,12 +4,37 @@ from neo4j import GraphDatabase
 from dotenv import load_dotenv
 
 load_dotenv()
+print("DEBUG: .env loaded (presumably)") # Check if this line appears
 
 uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 username = os.getenv("NEO4J_USERNAME", "neo4j")
-password = os.getenv("NEO4J_PASSWORD", "your_password")
+password = os.getenv("NEO4J_PASSWORD", "your_password") # Default if not in .env
 
-driver = GraphDatabase.driver(uri, auth=(username, password))
+# --- VERIFY THESE DEBUG PRINTS ARE PRESENT ---
+print(f"DEBUG: Attempting to connect with:")
+print(f"DEBUG:   URI: {uri}")
+print(f"DEBUG:   Username: {username}")
+# Mask password for security, but show length
+password_display = f"{password[:1]}...{password[-1:]}" if password and len(password) > 1 else ("<empty>" if not password else password)
+print(f"DEBUG:   Password (masked): {password_display} (Length: {len(password) if password else 0})")
+# --- END DEBUG PRINTS ---
+
+# Initialize driver (inside a try block is good practice)
+driver = None # Initialize driver as None
+try:
+    if uri and username and password: # Check if credentials were loaded
+        driver = GraphDatabase.driver(uri, auth=(username, password))
+        # Optional: Verify connectivity immediately after creating driver
+        # print("DEBUG: Attempting driver verification...")
+        # driver.verify_connectivity()
+        # print("DEBUG: Driver verification successful.")
+        print("DEBUG: Neo4j driver object initialized.")
+    else:
+        print("ERROR: Missing Neo4j URI, Username, or Password in environment/.env file.")
+
+except Exception as e:
+    print(f"ERROR connecting to Neo4j or initializing driver: {e}")
+    # driver remains None
 
 def store_document(tx, source):
     """
@@ -44,7 +69,7 @@ def store_chunk_with_relationship(tx, chunk_text, method, source, token_count, e
     })
     // Create the relationship
     CREATE (d)-[:CONTAINS]->(c)
-    RETURN id(c) as id
+    RETURN elementId(c) as id
     """
     # Parameters passed remain the same
     result = tx.run(query, text=chunk_text, method=method, source=source,
