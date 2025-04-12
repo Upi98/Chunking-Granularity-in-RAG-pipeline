@@ -26,25 +26,32 @@ def store_document(tx, source):
 
 def store_chunk_with_relationship(tx, chunk_text, method, source, token_count, embedding, embedding_cost):
     """
-    Creates a Chunk node with extra metadata and links it to its Document node.
+    Stores a chunk node with its properties (including source)
+    and links it to the source Document node.
     """
     query = """
+    // Ensure the Document node exists
     MERGE (d:Document {source: $source})
       ON CREATE SET d.created = timestamp()
+    // Create the Chunk node with properties, INCLUDING source
     CREATE (c:Chunk {
         text: $text,
         method: $method,
         token_count: $token_count,
         embedding: $embedding,
-        embedding_cost: $embedding_cost
+        embedding_cost: $embedding_cost,
+        source: $source  
     })
+    // Create the relationship
     CREATE (d)-[:CONTAINS]->(c)
     RETURN id(c) as id
     """
+    # Parameters passed remain the same
     result = tx.run(query, text=chunk_text, method=method, source=source,
                     token_count=token_count, embedding=embedding, embedding_cost=embedding_cost)
     record = result.single()
     return record["id"] if record else None
+
 
 def store_chunks(chunks, method, source, embedding_func, tokenizer):
     """
