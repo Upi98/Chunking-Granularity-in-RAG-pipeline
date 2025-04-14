@@ -2,22 +2,15 @@
 import os
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
+from embedding_processor import count_tokens
 
 load_dotenv()
 print("DEBUG: .env loaded (presumably)") # Check if this line appears
 
 uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 username = os.getenv("NEO4J_USERNAME", "neo4j")
-password = os.getenv("NEO4J_PASSWORD", "your_password") # Default if not in .env
+password = os.getenv("NEO4J_PASSWORD", "your_password") 
 
-# --- VERIFY THESE DEBUG PRINTS ARE PRESENT ---
-print(f"DEBUG: Attempting to connect with:")
-print(f"DEBUG:   URI: {uri}")
-print(f"DEBUG:   Username: {username}")
-# Mask password for security, but show length
-password_display = f"{password[:1]}...{password[-1:]}" if password and len(password) > 1 else ("<empty>" if not password else password)
-print(f"DEBUG:   Password (masked): {password_display} (Length: {len(password) if password else 0})")
-# --- END DEBUG PRINTS ---
 
 # Initialize driver (inside a try block is good practice)
 driver = None # Initialize driver as None
@@ -49,45 +42,72 @@ def store_document(tx, source):
     record = result.single()
     return record["doc_id"] if record else None
 
-def store_chunk_with_relationship(tx, chunk_text, method, source, token_count, embedding, embedding_cost):
+def store_chunk_with_relationship(tx, chunk_text, chunk_index, method, source, token_count, embedding):
     """
-    Stores a chunk node with its properties (including source)
-    and links it to the source Document node.
+    Stores a chunk node with properties including chunk_index and embedding_model,
+    and links it to the source Document node. Cost is removed.
     """
+    embedding_model_name = "bge-base-en-v1.5" # Define BGE model name
+
     query = """
-    // Ensure the Document node exists
-    MERGE (d:Document {source: $source})
-      ON CREATE SET d.created = timestamp()
-    // Create the Chunk node with properties, INCLUDING source
+    MERGE (d:Document {source: $source}) ON CREATE SET d.created = timestamp()
     CREATE (c:Chunk {
         text: $text,
+        chunk_index: $chunk_index, // <-- Store the index
         method: $method,
         token_count: $token_count,
         embedding: $embedding,
-        embedding_cost: $embedding_cost,
-        source: $source  
+        source: $source,
+        embedding_model: $embedding_model_name
     })
-    // Create the relationship
     CREATE (d)-[:CONTAINS]->(c)
     RETURN elementId(c) as id
     """
-    # Parameters passed remain the same
-    result = tx.run(query, text=chunk_text, method=method, source=source,
-                    token_count=token_count, embedding=embedding, embedding_cost=embedding_cost)
+    result = tx.run(query,
+                    text=chunk_text,
+                    chunk_index=chunk_index, # Pass index parameter
+                    method=method,
+                    source=source,
+                    token_count=token_count,
+                    embedding=embedding,
+                    embedding_model_name=embedding_model_name)
     record = result.single()
     return record["id"] if record else None
 
+# Modify to accept list of dicts and pass index
+def store_chunks(chunks_with_meta, method, source, embedding_func): # Renamed param
+    """
+    Loops over chunks (now dicts with 'text' and 'index'), computes token counts,
+    embeddings, and stores each chunk in Neo4j with relationships and index.
+    """
+    if driver is None:
+        print("ERROR: Neo4j driver not initialized in store_chunks. Aborting.")
+        return
 
-def store_chunks(chunks, method, source, embedding_func, tokenizer):
-    """
-    Loops over chunks, computes token counts, embeddings, cost estimates, and stores each chunk in Neo4j with relationships.
-    """
-    from embedding_processor import compute_embedding_cost
     with driver.session() as session:
-        for chunk in chunks:
-            token_count = len(tokenizer.encode(chunk))
-            embedding = embedding_func(chunk)
-            cost = compute_embedding_cost(token_count)
-            node_id = session.write_transaction(store_chunk_with_relationship,
-                                                  chunk, method, source, token_count, embedding, cost)
-            print(f"Stored chunk from {source} using {method} with node id: {node_id}")
+        # Iterate through the list of dictionaries
+        for chunk_data in chunks_with_meta:
+            chunk_text = chunk_data["text"]
+            chunk_index = chunk_data["index"] # Get the index
+
+            # Use the imported count_tokens function for consistency
+            token_count = count_tokens(chunk_text) # Use BGE tokenizer count
+
+            embedding = embedding_func(chunk_text)
+
+            if embedding is not None:
+                node_id = session.write_transaction(
+                    store_chunk_with_relationship,
+                    chunk_text,
+                    chunk_index, # Pass the index
+                    method,
+                    source,
+                    token_count,
+                    embedding
+                )
+                if node_id:
+                     print(f"Stored chunk {chunk_index} from {source} using {method} ({token_count} BGE tokens) with node id: {node_id}")
+                else:
+                     print(f"Failed to store chunk {chunk_index} from {source} using {method} (tx returned None)")
+            else:
+                print(f"Skipped storing chunk {chunk_index} from {source} using {method} due to embedding error.")
