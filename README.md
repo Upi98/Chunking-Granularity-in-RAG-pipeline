@@ -1,24 +1,24 @@
-Advanced Path-Based RAG Evaluation Framework
+# Advanced Path-Based RAG Evaluation Framework
 This project provides a complete, end-to-end pipeline for evaluating the effectiveness of different text chunking strategies within a sophisticated Path-Based Retrieval-Augmented Generation (RAG) system. It demonstrates how to move beyond simple vector search by leveraging a Neo4j Knowledge Graph.
 
 The workflow ingests documents, creates a graph of interconnected text chunks and entities, and then evaluates retrieval performance by traversing these connections to build a richer, more relevant context for a Large Language Model (LLM).
 
-🏗️ **Architectural Overview**
+🏗️ # **Architectural Overview**
 The project follows a multi-stage workflow designed to build and evaluate a Graph RAG system. The key innovation is in the final evaluation step, which uses graph traversals for context retrieval.
 
-📄 **Data Ingestion (main.py):** 
+📄 # **Data Ingestion (main.py):** 
 PDF documents are parsed to extract raw text content. Metadata is extracted from the filenames.
 
-🔪 **Multi-Strategy Chunking (main.py):** 
+🔪 # **Multi-Strategy Chunking (main.py):** 
 The text is processed in parallel by multiple chunking algorithms, including fixed-size, sentence-aware, and a custom structure-aware hybrid method. The hybrid method also extracts structural metadata like headings.
 
-🧠 **Embedding (embedding_processor.py):** 
+🧠 # **Embedding (embedding_processor.py):** 
 Chunks are converted into dense vector embeddings using a SentenceTransformer model.
 
-💾 **Initial Graph Storage (neo4j_storage.py):** 
+💾 # **Initial Graph Storage (neo4j_storage.py):** 
 Chunks, embeddings, and metadata are stored as (Document)-[:CONTAINS]->(Chunk) nodes in Neo4j.
 
-✨ **Graph Enrichment & Path Creation (enrich_graph_spacy.py):** 
+✨ # **Graph Enrichment & Path Creation (enrich_graph_spacy.py):** 
 This critical step transforms the simple document graph into a rich, interconnected knowledge graph. It traverses the stored chunks and:
 
 Creates :NEXT_CHUNK relationships to link sequential text chunks.
@@ -27,19 +27,19 @@ Uses spaCy for Named Entity Recognition (NER) to create new Company, Metric, and
 
 Creates :MENTIONS relationships from chunks to the entities they reference.
 
-📈 **Path-Based RAG Evaluation (batch_naive_rag_eval.py):** 
+📈 # **Path-Based RAG Evaluation (batch_naive_rag_eval.py):** 
 
 This is the core evaluation loop, which tests the effectiveness of the graph structure.
 
-Load Questions: A Q&A dataset is loaded from evaluation_qa.csv.
+1. Load Questions: A Q&A dataset is loaded from evaluation_qa.csv.
 
-Find Anchors: For a given question, it performs a vector search to find the most relevant "anchor" chunks. The chunking method being tested acts as a filter for this initial search.
+2. Find Anchors: For a given question, it performs a vector search to find the most relevant "anchor" chunks. The chunking method being tested acts as a filter for this initial search.
 
-Traverse Paths: From each anchor chunk, it traverses the graph, following :NEXT_CHUNK and :MENTIONS relationships to gather surrounding context and related entities.
+3. Traverse Paths: From each anchor chunk, it traverses the graph, following :NEXT_CHUNK and :MENTIONS relationships to gather surrounding context and related entities.
 
-Construct Context: A rich context is built for the LLM, combining the anchor chunk's text with preceding/following text snippets and a list of mentioned entities.
+4. Construct Context: A rich context is built for the LLM, combining the anchor chunk's text with preceding/following text snippets and a list of mentioned entities.
 
-Generate & Evaluate: The question and the path-based context are sent to a local LLM. The generated answer is then compared against the ground-truth answer using a full suite of metrics.
+5. Generate & Evaluate: The question and the path-based context are sent to a local LLM. The generated answer is then compared against the ground-truth answer using a full suite of metrics.
 
 ✨ **Key Features**
 **Path-Based Graph RAG:** Moves beyond simple k-NN search by traversing the knowledge graph to build a more comprehensive and contextually aware prompt.
@@ -80,24 +80,19 @@ Python 3.8+
 **Installation**
 Clone the repository:
 
-Bash
-
 git clone <your-repository-url>
 cd <your-repository-name>
-Create and activate a virtual environment:
 
-Bash
+Create and activate a virtual environment:
 
 python -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+
 Install the required Python packages from requirements.txt:
 
-Bash
-
 pip install -r requirements.txt
-A requirements.txt for this project would include:
 
-Plaintext
+A requirements.txt for this project would include:
 
 # requirements.txt
 pandas
