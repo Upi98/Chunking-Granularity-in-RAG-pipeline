@@ -7,8 +7,8 @@ from typing import List, Optional
 import numpy as np
 
 # --- Model and Tokenizer Configuration ---
-LOCAL_EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
-BGE_BASE_DIMENSION = 768
+LOCAL_EMBEDDING_MODEL = "sentence-transformers/multi-qa-mpnet-base-cos-v1"
+EMBEDDING_DIMENSION = 768
 DEVICE = os.getenv("EMBEDDING_DEVICE", "cpu")
 # Use the same identifier for the tokenizer
 TOKENIZER_NAME = LOCAL_EMBEDDING_MODEL
@@ -27,8 +27,8 @@ try:
 
     # Optional dimension check (keep as is)
     test_emb = model.encode("test")
-    if len(test_emb) != BGE_BASE_DIMENSION:
-         print(f"Warning: Expected dimension {BGE_BASE_DIMENSION} but got {len(test_emb)}")
+    if len(test_emb) != EMBEDDING_DIMENSION:
+         print(f"Warning: Expected dimension {EMBEDDING_DIMENSION} but got {len(test_emb)}")
     else:
         print(f"DEBUG: Model embedding dimension confirmed: {len(test_emb)}")
 
@@ -42,7 +42,7 @@ except Exception as e:
 def get_embedding(text: str) -> Optional[List[float]]:
     # ... (function code remains the same) ...
     if model is None: return None # Check added during init
-    if not text or not text.strip(): return [0.0] * BGE_BASE_DIMENSION # Check added during init
+    if not text or not text.strip(): return [0.0] * EMBEDDING_DIMENSION # Check added during init
     try:
         processed_text = ' '.join(text.split())
         embedding_np = model.encode(processed_text, normalize_embeddings=True)

@@ -1,113 +1,85 @@
 # src/neo4j_storage.py
+
 import os
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
-from embedding_processor import count_tokens
+from typing import List, Dict, Any
+from embedding_processor import count_tokens # Ensure this is correctly imported
 
-load_dotenv()
-print("DEBUG: .env loaded (presumably)") # Check if this line appears
-
+# Load environment and initialize driver (assuming this part is fine)
+dotenv_loaded = load_dotenv()
 uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-username = os.getenv("NEO4J_USERNAME", "neo4j")
-password = os.getenv("NEO4J_PASSWORD", "your_password") 
+user = os.getenv("NEO4J_USERNAME", "neo4j")
+password = os.getenv("NEO4J_PASSWORD", "password")
 
-
-# Initialize driver (inside a try block is good practice)
-driver = None # Initialize driver as None
+# It might be better to manage the driver instance within your main script
+# or use a dedicated connection manager, but we'll keep this structure for now.
+# Consider passing the driver or session into functions instead of using a global.
+driver = None
 try:
-    if uri and username and password: # Check if credentials were loaded
-        driver = GraphDatabase.driver(uri, auth=(username, password))
-        # Optional: Verify connectivity immediately after creating driver
-        # print("DEBUG: Attempting driver verification...")
-        # driver.verify_connectivity()
-        # print("DEBUG: Driver verification successful.")
-        print("DEBUG: Neo4j driver object initialized.")
-    else:
-        print("ERROR: Missing Neo4j URI, Username, or Password in environment/.env file.")
-
+    driver = GraphDatabase.driver(uri, auth=(user, password))
+    # You might want to verify connectivity once at the start of main.py
 except Exception as e:
-    print(f"ERROR connecting to Neo4j or initializing driver: {e}")
-    # driver remains None
+    print(f"ERROR: Failed to create Neo4j driver: {e}")
+    # Handle driver creation failure appropriately
 
-def store_document(tx, source):
+def store_chunks_neo4j(session, metas: List[Dict[str, Any]], embeddings: List[List[float]]):
     """
-    Creates or finds a Document node for the source file.
+    Stores Document and Chunk nodes with full metadata, token counts, embeddings,
+    and heading information.
     """
-    query = """
-    MERGE (d:Document {source: $source})
-    ON CREATE SET d.created = timestamp()
-    RETURN id(d) as doc_id
-    """
-    result = tx.run(query, source=source)
-    record = result.single()
-    return record["doc_id"] if record else None
-
-def store_chunk_with_relationship(tx, chunk_text, chunk_index, method, source, token_count, embedding):
-    """
-    Stores a chunk node with properties including chunk_index and embedding_model,
-    and links it to the source Document node. Cost is removed.
-    """
-    embedding_model_name = "bge-base-en-v1.5" # Define BGE model name
-
-    query = """
-    MERGE (d:Document {source: $source}) ON CREATE SET d.created = timestamp()
-    CREATE (c:Chunk {
-        text: $text,
-        chunk_index: $chunk_index, // <-- Store the index
-        method: $method,
-        token_count: $token_count,
-        embedding: $embedding,
-        source: $source,
-        embedding_model: $embedding_model_name
-    })
-    CREATE (d)-[:CONTAINS]->(c)
-    RETURN elementId(c) as id
-    """
-    result = tx.run(query,
-                    text=chunk_text,
-                    chunk_index=chunk_index, # Pass index parameter
-                    method=method,
-                    source=source,
-                    token_count=token_count,
-                    embedding=embedding,
-                    embedding_model_name=embedding_model_name)
-    record = result.single()
-    return record["id"] if record else None
-
-# Modify to accept list of dicts and pass index
-def store_chunks(chunks_with_meta, method, source, embedding_func): # Renamed param
-    """
-    Loops over chunks (now dicts with 'text' and 'index'), computes token counts,
-    embeddings, and stores each chunk in Neo4j with relationships and index.
-    """
-    if driver is None:
-        print("ERROR: Neo4j driver not initialized in store_chunks. Aborting.")
+    # Check if session is valid (basic check)
+    if not hasattr(session, 'run'):
+        print("ERROR: Invalid Neo4j session passed to store_chunks_neo4j")
         return
 
-    with driver.session() as session:
-        # Iterate through the list of dictionaries
-        for chunk_data in chunks_with_meta:
-            chunk_text = chunk_data["text"]
-            chunk_index = chunk_data["index"] # Get the index
+    for meta, emb in zip(metas, embeddings):
+        # Compute token count
+        tok_cnt = count_tokens(meta['text'])
 
-            # Use the imported count_tokens function for consistency
-            token_count = count_tokens(chunk_text) # Use BGE tokenizer count
+        # --- MODIFIED SECTION START ---
+        # Build params including all desired properties, ADDING 'heading'
+        params: Dict[str, Any] = {
+            'filename':            meta['filename'],
+            'company_name':        meta['company_name'],
+            'ticker_symbol':       meta['ticker_symbol'],
+            'report_type':         meta['report_type'],
+            'fiscal_quarter_year': meta['fiscal_quarter_year'],
+            'chunk_id':            meta['chunk_id'],
+            'chunk_index':         meta['chunk_index'],
+            'method':              meta['chunking_method'],
+            'is_table':            meta['is_table'],
+            'heading':             meta.get('heading'), # Use .get() for safety if heading might be missing
+            'token_count':         tok_cnt,
+            'text':                meta['text'],
+            'embedding':           emb
+        }
 
-            embedding = embedding_func(chunk_text)
+        # Merge document node and set metadata
+        # Merge chunk node and set properties, ADDING 'heading'
+        try:
+            session.run(
+                '''
+                MERGE (d:Document {filename: $filename})
+                SET d.company_name        = $company_name,
+                    d.ticker_symbol       = $ticker_symbol,
+                    d.report_type         = $report_type,
+                    d.fiscal_quarter_year = $fiscal_quarter_year
 
-            if embedding is not None:
-                node_id = session.write_transaction(
-                    store_chunk_with_relationship,
-                    chunk_text,
-                    chunk_index, # Pass the index
-                    method,
-                    source,
-                    token_count,
-                    embedding
-                )
-                if node_id:
-                     print(f"Stored chunk {chunk_index} from {source} using {method} ({token_count} BGE tokens) with node id: {node_id}")
-                else:
-                     print(f"Failed to store chunk {chunk_index} from {source} using {method} (tx returned None)")
-            else:
-                print(f"Skipped storing chunk {chunk_index} from {source} using {method} due to embedding error.")
+                MERGE (c:Chunk {id: $chunk_id})
+                SET c.text         = $text,
+                    c.chunk_index  = $chunk_index,
+                    c.method       = $method,
+                    c.is_table     = $is_table,
+                    c.heading      = $heading, // <-- ADDED HEADING HERE
+                    c.token_count  = $token_count,
+                    c.embedding    = $embedding
+
+                MERGE (d)-[:CONTAINS]->(c)
+                ''',
+                params
+            )
+        except Exception as e:
+             # Add some error logging for individual chunk storage failures
+             print(f"ERROR storing chunk {params.get('chunk_id', 'N/A')}: {e}")
+             # Decide if you want to continue or stop processing on error

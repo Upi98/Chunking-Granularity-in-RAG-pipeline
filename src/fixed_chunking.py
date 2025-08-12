@@ -1,7 +1,7 @@
 # src/fixed_chunking.py
 from transformers import AutoTokenizer
 
-TOKENIZER_NAME = "BAAI/bge-base-en-v1.5"
+TOKENIZER_NAME = "sentence-transformers/multi-qa-mpnet-base-cos-v1"
 tokenizer = None # Initialize as None initially
 try:
     # Attempt to load the tokenizer
