@@ -2,7 +2,7 @@
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under License - see the [LICENSE](LICENSE) file for details.
 
 # Advanced Path-Based RAG Evaluation Framework
 This project provides a complete, end-to-end pipeline for evaluating the effectiveness of different text chunking strategies within a sophisticated Path-Based Retrieval-Augmented Generation (RAG) system. It demonstrates how to move beyond simple vector search by leveraging a Neo4j Knowledge Graph.
