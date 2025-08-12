@@ -3,43 +3,23 @@ This project provides a complete, end-to-end pipeline for evaluating the effecti
 
 The workflow ingests documents, creates a graph of interconnected text chunks and entities, and then evaluates retrieval performance by traversing these connections to build a richer, more relevant context for a Large Language Model (LLM).
 
-📜 **Table of Contents**
-**Architectural Overview**
-
-✨** Key Features**
-
-🔧 **Core Components**
-
-🚀 **Getting Started**
-
-**Prerequisites**
-
-**Installation**
-
-**Environment Configuration**
-
-⚙️ **How to Run the Pipeline**
-
-Step 1: Ingest and Chunk Documents
-
-Step 2: Enrich Graph and Build Paths
-
-Step 3: Run the Path-Based RAG Evaluation
-
-📊 **Evaluation Metrics**
-
 🏗️ **Architectural Overview**
 The project follows a multi-stage workflow designed to build and evaluate a Graph RAG system. The key innovation is in the final evaluation step, which uses graph traversals for context retrieval.
 
-📄 **Data Ingestion (main.py):** PDF documents are parsed to extract raw text content. Metadata is extracted from the filenames.
+📄 **Data Ingestion (main.py):** 
+PDF documents are parsed to extract raw text content. Metadata is extracted from the filenames.
 
-🔪 **Multi-Strategy Chunking (main.py):** The text is processed in parallel by multiple chunking algorithms, including fixed-size, sentence-aware, and a custom structure-aware hybrid method. The hybrid method also extracts structural metadata like headings.
+🔪 **Multi-Strategy Chunking (main.py):** 
+The text is processed in parallel by multiple chunking algorithms, including fixed-size, sentence-aware, and a custom structure-aware hybrid method. The hybrid method also extracts structural metadata like headings.
 
-🧠 **Embedding (embedding_processor.py):** Chunks are converted into dense vector embeddings using a SentenceTransformer model.
+🧠 **Embedding (embedding_processor.py):** 
+Chunks are converted into dense vector embeddings using a SentenceTransformer model.
 
-💾 **Initial Graph Storage (neo4j_storage.py):** Chunks, embeddings, and metadata are stored as (Document)-[:CONTAINS]->(Chunk) nodes in Neo4j.
+💾 **Initial Graph Storage (neo4j_storage.py):** 
+Chunks, embeddings, and metadata are stored as (Document)-[:CONTAINS]->(Chunk) nodes in Neo4j.
 
-✨ **Graph Enrichment & Path Creation (enrich_graph_spacy.py):** This critical step transforms the simple document graph into a rich, interconnected knowledge graph. It traverses the stored chunks and:
+✨ **Graph Enrichment & Path Creation (enrich_graph_spacy.py):** 
+This critical step transforms the simple document graph into a rich, interconnected knowledge graph. It traverses the stored chunks and:
 
 Creates :NEXT_CHUNK relationships to link sequential text chunks.
 
@@ -47,7 +27,9 @@ Uses spaCy for Named Entity Recognition (NER) to create new Company, Metric, and
 
 Creates :MENTIONS relationships from chunks to the entities they reference.
 
-📈 **Path-Based RAG Evaluation (batch_naive_rag_eval_3.py):** This is the core evaluation loop, which tests the effectiveness of the graph structure.
+📈 **Path-Based RAG Evaluation (batch_naive_rag_eval.py):** 
+
+This is the core evaluation loop, which tests the effectiveness of the graph structure.
 
 Load Questions: A Q&A dataset is loaded from evaluation_qa.csv.
 
