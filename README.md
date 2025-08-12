@@ -170,6 +170,7 @@ This is the final step. It uses the evaluation_qa.csv file to test the performan
 Note: This process is computationally intensive and can take a significant amount of time.
 
 python batch_naive_rag_eval.py
+
 The script will generate detailed logs and results in the results/ directory, including the final report final_chunking_path_rag_all_metrics.csv.
 
 **📊 Evaluation Metrics**
