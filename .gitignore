@@ -1,5 +1,0 @@
-venv/
-__pycache__/
-.env
-old ones/
-chroma_db_store/chroma.sqlite3
