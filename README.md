@@ -60,13 +60,20 @@ This is the core evaluation loop, which tests the effectiveness of the graph str
 
 **File	Description**
 **main.py**	Ingestion Orchestrator. Manages PDF extraction, chunking, embedding, and initial storage in Neo4j.
+
 **pdf_extractor.py**	Extracts raw text from PDF files.
-***chunking.py**	Implementations for fixed-size, sentence-aware, and hybrid chunking strategies.
+
+**chunking.py**	Implementations for fixed-size, sentence-aware, and hybrid chunking strategies.
+
 **embedding_processor.py**	Handles loading the embedding model and generating vectors.
+
 **neo4j_storage.py**	Manages writing chunk data to Neo4j, including document nodes and chunk properties.
+
 **enrich_graph_spacy.py**	Required for Path RAG. Enriches the graph with entity nodes and creates :NEXT_CHUNK and :MENTIONS relationships.
+
 **batch_naive_rag_eval.py**	Main Evaluation Script. Runs the full Path-Based RAG evaluation using the graph structure.
-**evaluation_qa.csv	**The input CSV file containing questions and ground-truth answers for the evaluation loop.
+
+**evaluation_qa.csv** The input CSV file containing questions and ground-truth answers for the evaluation loop.
 
 # 🚀 **Getting Started**
 
@@ -77,17 +84,17 @@ This is the core evaluation loop, which tests the effectiveness of the graph str
 **Source Documents:** Your PDF files placed in a data/ directory at the project root.
 
 # **Installation**
-Clone the repository:
+**Clone the repository:**
 
 git clone <your-repository-url>
 cd <your-repository-name>
 
-Create and activate a virtual environment:
+**Create and activate a virtual environment:**
 
 python -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
-Install the required Python packages from requirements.txt:
+**Install the required Python packages from requirements.txt:**
 
 pip install -r requirements.txt
 
@@ -111,23 +118,33 @@ tiktoken
 **Download the spaCy model:**
 
 python -m spacy download en_core_web_lg
-Environment Configuration
+
+**Environment Configuration**
+
 Create a .env file in the project's root directory and populate it with your credentials.
 
 **Neo4j Connection Details**
+
 NEO4J_URI="bolt://localhost:7687"
+
 NEO4J_USERNAME="neo4j"
+
 NEO4J_PASSWORD="your_neo4j_password"
+
 NEO4J_DATABASE="neo4j"
 
 **Local LLM (Ollama) API Endpoint**
+
 LOCAL_LLM_API_URL="http://localhost:11434/api/chat"
+
 LOCAL_LLM_REQUEST_TIMEOUT=240
 
 **Embedding model to filter by during enrichment/evaluation**
+
 EMBEDDING_MODEL_FILTER="sentence-transformers/multi-qa-mpnet-base-cos-v1"
 
 # **⚙️ How to Run the Pipeline**
+
 Execute these scripts sequentially from the src/ directory.
 
 **Step 1: Ingest and Chunk Documents**
