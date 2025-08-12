@@ -184,6 +184,7 @@ The evaluation script measures performance using a comprehensive set of metrics 
 
 **Semantic Similarity:** The cosine similarity between the vector embeddings of the generated and ground-truth answers.
 
+**Token consumption:** The consumed retrieved tokens when performing the RAG.
 
 
 
